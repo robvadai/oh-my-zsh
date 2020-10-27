@@ -1,6 +1,10 @@
 # Open the current directory in a Finder window
 alias ofd='open_command $PWD'
 
+function largest() {
+  (( $# > 1 )) && du -k $1 | awk -v kbytes=$2 '$1 > kbytes'
+}
+
 function _omz_osx_get_frontmost_app() {
   local the_app=$(
     osascript 2>/dev/null <<EOF
