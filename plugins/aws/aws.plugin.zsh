@@ -41,12 +41,12 @@ function acp() {
 
   local exists="$(aws configure get aws_access_key_id --profile $1)"
   local role_arn="$(aws configure get role_arn --profile $1)"
+  local mfa_serial="$(aws configure get mfa_serial --profile $1)"
   local aws_access_key_id=""
   local aws_secret_access_key=""
   local aws_session_token=""
   if [[ -n $exists || -n $role_arn ]]; then
     if [[ -n $role_arn ]]; then
-      local mfa_serial="$(aws configure get mfa_serial --profile $1)"
       local mfa_token=""
       local mfa_opt=""
       if [[ -n $mfa_serial ]]; then
@@ -79,6 +79,20 @@ function acp() {
       aws_access_key_id="$(echo $JSON | jq -r '.Credentials.AccessKeyId')"
       aws_secret_access_key="$(echo $JSON | jq -r '.Credentials.SecretAccessKey')"
       aws_session_token="$(echo $JSON | jq -r '.Credentials.SessionToken')"
+    elif [[ -n $mfa_serial ]]; then
+        echo "Please enter your MFA token for $mfa_serial:"
+        read mfa_token
+        echo "Please enter the session duration in seconds (900-43200; default: 3600, which is the default maximum for a role):"
+        read sess_duration
+        if [[ -z $sess_duration ]]; then
+          sess_duration="3600"
+        fi
+
+        local JSON=$(aws sts get-session-token --serial-number "$mfa_serial" --token-code $mfa_token)
+
+        aws_access_key_id="$(echo $JSON | jq -r '.Credentials.AccessKeyId')"
+        aws_secret_access_key="$(echo $JSON | jq -r '.Credentials.SecretAccessKey')"
+        aws_session_token="$(echo $JSON | jq -r '.Credentials.SessionToken')"
     else
       aws_access_key_id="$(aws configure get aws_access_key_id --profile $1)"
       aws_secret_access_key="$(aws configure get aws_secret_access_key --profile $1)"
