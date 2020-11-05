@@ -62,6 +62,8 @@ function acp() {
 
   # Now see whether we need to just MFA for the current role, or assume a different one
   local credentials_output=""
+  local profile=$1
+
   if [[ -n $role_arn ]]; then
     # Means we need to assume a specified role
 
@@ -73,7 +75,6 @@ function acp() {
     fi
 
     # Get source profile to use to assume role
-    local profile=$1
     local source_profile="$(aws configure get source_profile --profile "$1")"
     if [[ -n $source_profile ]]; then
       profile=$source_profile
@@ -82,12 +83,14 @@ function acp() {
     echo "Assuming role $role_arn using profile $profile"
     local assume_cmd=(aws sts assume-role "--profile=$profile" "--role-arn $role_arn" "--role-session-name $profile" "$mfa_opt" "$extid_opt"
       "--query '[Credentials.AccessKeyId,Credentials.SecretAccessKey,Credentials.SessionToken]' --output text | tr '\t' '\n'")
+    echo "assume_cmd: "${assume_cmd[@]}"\n"
     credentials_output="$(eval "${assume_cmd[@]}")"
   elif [[ -n $mfa_opt ]]; then
     # Means we only need to do MFA
     echo "Obtaining session token for profile $profile"
     local get_token_cmd=(aws sts get-session-token "--profile=$profile" "$mfa_opt"
       "--query '[Credentials.AccessKeyId,Credentials.SecretAccessKey,Credentials.SessionToken]' --output text | tr '\t' '\n'")
+    echo "get_token_cmd: "${get_token_cmd[@]}"\n"
     credentials_output="$(eval "${get_token_cmd[@]}")"
   fi
 
